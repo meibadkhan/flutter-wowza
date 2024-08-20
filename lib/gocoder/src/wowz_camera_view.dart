@@ -1,6 +1,6 @@
 part of gocoder;
 
-const _camera_view_channel = 'flutter_wowza';
+const _cameraViewChannel = 'flutter_wowza';
 
 enum BroadcastState {
   READY,
@@ -11,22 +11,22 @@ enum BroadcastState {
   BROADCASTING_ERROR
 }
 
-WOWZBroadcastStatus wowzBroadcastStatusFromJson(String str) =>
+WOWZBroadcastStatus parseBroadcastStatus(String str) =>
     WOWZBroadcastStatus.fromJson(json.decode(str));
 
-String clientToJson(WOWZBroadcastStatus data) => json.encode(data.toJson());
+String encodeBroadcastStatus(WOWZBroadcastStatus data) => json.encode(data.toJson());
 
 class WOWZBroadcastStatus {
   BroadcastState state;
   String message;
   bool isError = false;
 
-  WOWZBroadcastStatus({this.state, this.message});
+  WOWZBroadcastStatus({required this.state, required this.message});
 
   factory WOWZBroadcastStatus.fromJson(Map<String, dynamic> json) =>
       WOWZBroadcastStatus(
           state: BroadcastState.values.firstWhere(
-              (type) => type.toString() == "BroadcastState." + json["state"]),
+                  (type) => type.toString() == "BroadcastState." + json["state"]),
           message: json["message"]);
 
   Map<String, dynamic> toJson() =>
@@ -46,10 +46,7 @@ enum WOWZMediaConfig {
 }
 
 enum ScaleMode {
-  /// Scale the camera preview to fit within the screen area. Letterboxing may be applied to maintain the aspect ratio.
   RESIZE_TO_ASPECT,
-
-  /// Scale the camera preview to fill the entire screen area. The preview may be cropped to maintain the aspect ratio.
   FILL_VIEW
 }
 
@@ -64,109 +61,96 @@ abstract class OnWOWZBroadcastStatusCallback {
 
 class WOWZCameraView extends StatefulWidget {
   WOWZCameraView(
-      {@required this.controller,
-      @required this.androidLicenseKey,
-      @required this.iosLicenseKey,
-      this.statusCallback,
-      this.broadcastStatusCallback});
+      {required this.controller,
+        required this.androidLicenseKey,
+        required this.iosLicenseKey,
+        required this.statusCallback,
+        required this.broadcastStatusCallback});
 
   @override
   _WOWZCameraViewState createState() => _WOWZCameraViewState();
 
   final WOWZCameraController controller;
-
   final WOWZStatusCallback statusCallback;
   final WOWZBroadcastStatusCallback broadcastStatusCallback;
-
   final String androidLicenseKey;
   final String iosLicenseKey;
 }
 
-class _WOWZCameraViewState extends State<WOWZCameraView> with AutomaticKeepAliveClientMixin{
+class _WOWZCameraViewState extends State<WOWZCameraView> with AutomaticKeepAliveClientMixin {
   var _viewId = 0;
-  MethodChannel _channel;
+  late MethodChannel _channel;
 
   @override
   void initState() {
     super.initState();
-    widget.controller?.addListener(() {
-      if (widget.controller != null && widget.controller.value != null) {
-        print('controller event: ${widget.controller.value.event}');
-        switch (widget.controller.value.event) {
-          case _flashlight:
-            if (defaultTargetPlatform == TargetPlatform.android)
-              _channel?.invokeMethod(
-                  widget.controller.value.event, widget.controller.value.value);
-            else
-              _channel?.invokeMethod(widget.controller.value.value
-                  ? _flashlightOn
-                  : _flashlightOff);
-            break;
-          case _muted:
-            if (defaultTargetPlatform == TargetPlatform.android)
-              _channel?.invokeMethod(
-                  widget.controller.value.event, widget.controller.value.value);
-            else
-              _channel?.invokeMethod(
-                  widget.controller.value.value ? _mutedOn : _mutedOff);
-            break;
-          case _startPreview:
-          case _startPreview:
-          case _stopPreview:
-          case _pausePreview:
-          case _continuePreview:
-          case _isSwitchCameraAvailable:
-          case _onPause:
-          case _onResume:
-          case _switchCamera:
-          case _fps:
-          case _bps:
-          case _khz:
-          case _startBroadcast:
-          case _endBroadcast:
-            _channel?.invokeMethod(
-                widget.controller.value.event, widget.controller.value.value);
-            break;
-          default:
-            break;
-        }
+    widget.controller.addListener(() {
+      print('controller event: ${widget.controller.value.event}');
+      switch (widget.controller.value.event) {
+        case _flashlight:
+          if (defaultTargetPlatform == TargetPlatform.android)
+            _channel.invokeMethod(widget.controller.value.event, widget.controller.value.value);
+          else
+            _channel.invokeMethod(widget.controller.value.value ? _flashlightOn : _flashlightOff);
+          break;
+        case _muted:
+          if (defaultTargetPlatform == TargetPlatform.android)
+            _channel.invokeMethod(widget.controller.value.event, widget.controller.value.value);
+          else
+            _channel.invokeMethod(widget.controller.value.value ? _mutedOn : _mutedOff);
+          break;
+        case _startPreview:
+        case _stopPreview:
+        case _pausePreview:
+        case _continuePreview:
+        case _isSwitchCameraAvailable:
+        case _onPause:
+        case _onResume:
+        case _switchCamera:
+        case _fps:
+        case _bps:
+        case _khz:
+        case _startBroadcast:
+        case _endBroadcast:
+          _channel.invokeMethod(widget.controller.value.event, widget.controller.value.value);
+          break;
+        default:
+          break;
       }
-    });
+        });
   }
 
   @override
   Widget build(BuildContext context) {
-   super.build(context);
+    super.build(context);
     return (defaultTargetPlatform == TargetPlatform.android)
         ? AndroidView(
-            viewType: _camera_view_channel,
-            onPlatformViewCreated: _onPlatformViewCreated,
-          )
+      viewType: _cameraViewChannel,
+      onPlatformViewCreated: _onPlatformViewCreated,
+    )
         : (defaultTargetPlatform == TargetPlatform.iOS)
-            ? UiKitView(
-                viewType: _camera_view_channel,
-                onPlatformViewCreated: _onPlatformViewCreated,
-              )
-            : Text(
-                '$defaultTargetPlatform is not yet supported by the text_view plugin');
+        ? UiKitView(
+      viewType: _cameraViewChannel,
+      onPlatformViewCreated: _onPlatformViewCreated,
+    )
+        : Text('$defaultTargetPlatform is not yet supported by the text_view plugin');
   }
 
-  _onPlatformViewCreated(int viewId) {
-    if (_viewId != viewId || _channel == null) {
+  void _onPlatformViewCreated(int viewId) {
+    if (_viewId != viewId) {
       _viewId = viewId;
 
-      _channel = MethodChannel("${_camera_view_channel}_$viewId");
-      widget.controller?._setChannel(_channel);
+      _channel = MethodChannel("${_cameraViewChannel}_$viewId");
+      widget.controller._setChannel(_channel);
 
       _channel.setMethodCallHandler((call) async {
         print('wowz: status: ${call.arguments}');
         switch (call.method) {
           case _broadcastStatus:
-            widget.broadcastStatusCallback(
-                wowzBroadcastStatusFromJson(call.arguments));
+            widget.broadcastStatusCallback(parseBroadcastStatus(call.arguments));
             break;
           case _broadcastError:
-            final status = wowzBroadcastStatusFromJson(call.arguments);
+            final status = parseBroadcastStatus(call.arguments);
             switch (status.state) {
               case BroadcastState.IDLE:
                 status.state = BroadcastState.IDLE_ERROR;
@@ -191,7 +175,7 @@ class _WOWZCameraViewState extends State<WOWZCameraView> with AutomaticKeepAlive
             break;
         }
       });
-      // license key gocoder sdk
+
       _channel.invokeMethod(
           _apiLicenseKey,
           (defaultTargetPlatform == TargetPlatform.android)
@@ -216,8 +200,7 @@ class WOWZSize {
   final int height;
 }
 
-@immutable
-// ignore: must_be_immutable
+
 class WOWZStatus {
   int mState = 0;
 
